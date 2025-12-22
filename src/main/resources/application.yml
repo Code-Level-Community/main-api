@@ -1,0 +1,52 @@
+greeting:
+  message: "hello"
+
+quarkus:
+  http:
+    cors:
+      enabled: true
+      origins: "*"
+      methods: "GET,POST,PUT,DELETE,OPTIONS"
+      headers: "Content-Type,Authorization,Content-Disposition"
+      exposed-headers: "Authorization"
+    root-path: /api
+    port: 8080
+  flyway:
+#    migrate-at-start: false
+    active: true
+  datasource:
+    db-kind: h2
+    jdbc:
+      url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
+    username: sa
+    password: sa
+  hibernate-orm:
+    schema-management:
+      strategy: drop-and-create
+    log:
+      format-sql: true
+      active: true
+  cache:
+    caffeine:
+      user-cache:
+        expire-after-write: 30M
+        expire-after-access: 10M
+        initial-capacity: 200
+        maximum-size: 5000
+      user-list-cache:
+        expire-after-write: 2M
+        expire-after-access: 1M
+        initial-capacity: 1
+        maximum-size: 10
+
+mp:
+  jwt:
+    verify:
+      publickey:
+        location: META-INF/resources/publicKey.pem
+      issuer: https://exemplo.com
+smallrye:
+  jwt:
+    sign:
+      key:
+        location: META-INF/resources/privateKey.pem
