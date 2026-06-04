@@ -5,6 +5,7 @@ WORKDIR /code
 COPY mvnw .mvn* ./
 COPY .mvn .mvn
 COPY pom.xml .
+RUN chmod +x ./mvnw
 RUN ./mvnw dependency:go-offline -q
 
 COPY src ./src
