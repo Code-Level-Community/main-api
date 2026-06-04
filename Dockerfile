@@ -17,4 +17,4 @@ WORKDIR /app
 COPY --from=builder /code/target/quarkus-app /app/quarkus-app
 
 EXPOSE 8080
-ENTRYPOINT ["java", "-Dquarkus.profile=prod", "-jar", "/app/quarkus-app/quarkus-run.jar"]
+ENTRYPOINT ["java", "-jar", "/app/quarkus-app/quarkus-run.jar"]
