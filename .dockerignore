@@ -1,10 +1,5 @@
-target/
-.mvn/wrapper/maven-wrapper.jar
-#mvnw.cmd
 .git
-.gitignore
-.idea
-.vscode
+.mvn/wrapper/maven-wrapper.jar
+target/
+*.md
 *.log
-.env
-.env.local
