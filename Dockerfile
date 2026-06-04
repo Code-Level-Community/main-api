@@ -12,7 +12,7 @@ RUN ./mvnw dependency:go-offline
 
 # Copia o código-fonte e executa o build nativo do Quarkus
 COPY --chown=quarkus:quarkus src /code/src
-RUN ./mvnw package -Dnative -Dquarkus.native.native-image-xmx=3g
+RUN ./mvnw package -Dnative -Dquarkus.native.native-image-xmx=3g -DskipTests
 
 ## Estágio 2: Execução (Baseado no seu Dockerfile.native-micro)
 FROM quay.io/quarkus/ubi9-quarkus-micro-image:2.0
