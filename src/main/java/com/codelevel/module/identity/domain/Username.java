@@ -1,6 +1,6 @@
 package com.codelevel.module.identity.domain;
 
-import com.codelevel.module.identity.domain.exception.BusinessRuleException;
+import com.codelevel.shared.exception.BusinessRuleException;
 
 public record Username(String value) {
 

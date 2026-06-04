@@ -1,7 +1,7 @@
 package com.codelevel.module.identity.persistence.resource;
 
-import com.codelevel.module.identity.persistence.resource.exception.ApplicationException;
-import com.codelevel.module.identity.persistence.resource.exception.ResourceAlreadyExists;
+import com.codelevel.shared.exception.ApplicationException;
+import com.codelevel.shared.exception.ResourceAlreadyExists;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.PersistenceException;
 import org.h2.jdbc.JdbcSQLIntegrityConstraintViolationException;

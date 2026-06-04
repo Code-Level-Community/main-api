@@ -1,0 +1,37 @@
+%% version: 1.0.0
+%% updated: 2026-05-08
+%% description: Fluxo de verificação e desbloqueio de achievements com cascade automático
+%%              para meta-achievements do tipo ACHIEVEMENT_UNLOCKED.
+
+flowchart TD
+    START([checkAndUnlock\nuserId · triggerType · currentValue])
+
+    START --> LOAD[Buscar todos os achievements\nWHERE triggerType = triggerType]
+    LOAD --> EMPTY{Nenhum achievement\nencontrado?}
+    EMPTY -->|Sim| RETURN_EMPTY[/Return lista vazia/]
+    EMPTY -->|Não| LOOP_START
+
+    subgraph LOOP ["Para cada achievement encontrado"]
+        LOOP_START([próximo achievement]) --> ALREADY{userId já possui\neste achievement em\nCL_USER_ACHIEVEMENT?}
+        ALREADY -->|Sim| SKIP([pular])
+        ALREADY -->|Não| CRITERIA{currentValue\n>= triggerCriteria\nnumérico?}
+        CRITERIA -->|Não| SKIP
+        CRITERIA -->|Sim| UNLOCK[Criar UserAchievementEntity\nunlockedAt = now()]
+        UNLOCK --> REWARD{xpReward > 0?}
+        REWARD -->|Sim| AWARD[xpService.award\nuserId · xpReward\nACHIEVEMENT_UNLOCKED\nachievementId]
+        REWARD -->|Não| COLLECT
+        AWARD --> COLLECT[Adicionar à lista\nde novos desbloqueios]
+    end
+
+    COLLECT --> NEXT{Mais achievements\nna lista?}
+    NEXT -->|Sim| LOOP_START
+    NEXT -->|Não| CASCADE_CHECK
+
+    CASCADE_CHECK{Algum achievement\nfoi desbloqueado\nnesta execução?}
+    CASCADE_CHECK -->|Não| RETURN_LIST[/Return lista de\nUserAchievementEntity/]
+    CASCADE_CHECK -->|Sim| COUNT[countByUserId\ntotal de achievements\ndo userId]
+    COUNT --> CASCADE[checkAndUnlock recursivo\nuserId · ACHIEVEMENT_UNLOCKED\ntotalAchievements]
+    CASCADE --> MERGE[Mesclar resultados\nda chamada recursiva]
+    MERGE --> RETURN_LIST
+
+    note1["Trigger types disponíveis:\nLESSONS_COMPLETED\nEXERCISE_COMPLETED\nSTREAK_DAYS\nCOURSE_COMPLETED\nACHIEVEMENT_UNLOCKED (cascade)"]

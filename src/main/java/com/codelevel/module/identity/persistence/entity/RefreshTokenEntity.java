@@ -4,6 +4,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Entity
 @Table(name = "cl_refresh_token")
@@ -27,8 +28,8 @@ public class RefreshTokenEntity extends PanacheEntityBase {
 
     private boolean revoked = false;
 
-    public static RefreshTokenEntity findByToken(String token) {
-        return find("token", token).firstResult();
+    public static Optional<RefreshTokenEntity> findByToken(String token) {
+        return find("token", token).firstResultOptional();
     }
 
     public static void revokeByUsername(String username) {

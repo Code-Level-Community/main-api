@@ -5,6 +5,7 @@ import java.util.UUID;
 public record UserSavedResponse(
     UUID id,
     String username,
-    String email
+    String email,
+    String fullName
 ) {
 }

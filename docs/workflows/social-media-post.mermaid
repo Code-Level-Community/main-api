@@ -1,0 +1,42 @@
+%% version: 1.0.0
+%% updated: 2026-05-08
+%% description: Ciclo de vida de um post em rede social (LinkedIn / Instagram),
+%%              incluindo mock toggle e processo em duas fases do Instagram.
+
+stateDiagram-v2
+    [*] --> PENDING: Admin cria post\nPOST /integration/posts
+
+    PENDING --> POSTED: Admin publica\nPOST /{id}/publish\n(API externa com sucesso)
+
+    PENDING --> FAILED: Admin publica\n(exceção da API externa)
+
+    PENDING --> [*]: Admin cancela\nDELETE /{id}
+
+    FAILED --> POSTED: Admin executa retry\nPOST /{id}/retry\n(nova tentativa com sucesso)
+
+    FAILED --> FAILED: Retry falha novamente\nerror_message atualizado
+
+    POSTED --> [*]: Estado final\nNão pode ser deletado
+
+    note right of PENDING
+        Tipos: TOP_CONTRIBUTOR, USER_MILESTONE,
+        NEW_COURSE, PLATFORM_UPDATE,
+        COURSE_APPROVED
+        scheduled_at disponível (sem job automático)
+        mock-publishing=true usa MockPublisher
+    end note
+
+    note right of POSTED
+        posted_at registrado
+        LinkedIn: apenas texto (sem mídia)
+        Instagram: duas fases obrigatórias
+        1. Criar container (image_url + caption)
+        2. Publicar container (creation_id)
+    end note
+
+    note right of FAILED
+        error_message com detalhe da falha
+        Retry reinicia do início
+        Instagram: container anterior\nfica pendente na conta (~24h)
+        Não há limpeza automática
+    end note

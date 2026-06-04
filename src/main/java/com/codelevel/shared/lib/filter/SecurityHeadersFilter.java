@@ -34,13 +34,13 @@ public class SecurityHeadersFilter implements ContainerResponseFilter {
 
         responseContext.getHeaders().add("Content-Security-Policy", csp);
 
-        // Outros headers de segurança
+        // Additional security headers
         responseContext.getHeaders().add("X-Content-Type-Options", "nosniff");
         responseContext.getHeaders().add("X-Frame-Options", "DENY");
         responseContext.getHeaders().add("X-XSS-Protection", "1; mode=block");
         responseContext.getHeaders().add("Referrer-Policy", "strict-origin-when-cross-origin");
 
-        // HSTS (apenas em produção)
+        // HSTS (production only)
         if (isProduction()) {
             responseContext.getHeaders().add(
                     "Strict-Transport-Security",

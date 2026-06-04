@@ -1,53 +1,61 @@
 package com.codelevel.module.identity.persistence.resource;
 
+import com.codelevel.module.identity.domain.EmailAddress;
+import com.codelevel.module.identity.domain.Password;
+import com.codelevel.module.identity.domain.PasswordHasher;
+import com.codelevel.module.identity.domain.Username;
 import com.codelevel.module.identity.http.rest.dto.LoginResponse;
 import com.codelevel.module.identity.http.rest.dto.RefreshRequest;
 import com.codelevel.module.identity.http.rest.dto.UserPutRequest;
 import com.codelevel.module.identity.domain.User;
-import com.codelevel.module.identity.domain.exception.BusinessRuleException;
+import com.codelevel.shared.exception.BusinessRuleException;
 import com.codelevel.module.identity.persistence.entity.UserEntity;
 import com.codelevel.module.identity.persistence.resource.dto.UserSave;
-import com.codelevel.module.identity.persistence.resource.exception.ApplicationException;
-import com.codelevel.module.identity.persistence.resource.exception.ResourceAlreadyExists;
-import com.codelevel.module.identity.persistence.resource.exception.ResourceNotFound;
 import com.codelevel.module.identity.persistence.entity.RefreshTokenEntity;
+import com.codelevel.shared.exception.ApplicationException;
+import com.codelevel.shared.exception.ResourceNotFound;
 import io.quarkus.cache.CacheInvalidate;
 import io.quarkus.cache.CacheInvalidateAll;
 import io.quarkus.cache.CacheKey;
 import io.quarkus.cache.CacheResult;
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import jakarta.persistence.PersistenceException;
 import jakarta.transaction.Transactional;
-import org.h2.jdbc.JdbcSQLIntegrityConstraintViolationException;
-import org.hibernate.exception.ConstraintViolationException;
-import org.slf4j.LoggerFactory;
+import org.jboss.logging.Logger;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 
 @ApplicationScoped
 public class AuthService implements CreateUpdate {
 
+    private static final Logger log = Logger.getLogger(AuthService.class);
+
+    private final TokenService tokenService;
+    private final PasswordHasher passwordHasher;
+
     @Inject
-    TokenService tokenService;
+    public AuthService(TokenService tokenService, PasswordHasher passwordHasher) {
+        this.tokenService = tokenService;
+        this.passwordHasher = passwordHasher;
+    }
 
     @Transactional
     public LoginResponse login(final String username, final String password) {
-        UserEntity entity = UserEntity.find("username = ?1 and enabled = ?2", username, true).firstResult();
-        if (Objects.isNull(entity)) throw new ResourceNotFound("Invalid Credentials");
-        var user = new User(entity.getUsername(), entity.getEmail(), entity.getPassword());
-        if (!user.matchPass(password)) throw new BusinessRuleException("Invalid Credentials");
+        UserEntity entity = (UserEntity) UserEntity.find("lower(username) = lower(?1) and enabled = ?2", username, true)
+                .firstResultOptional()
+                .orElseThrow(() -> new BusinessRuleException("Invalid Credentials"));
 
-        String accessToken = tokenService.generateAccessToken(user.getUsername(), entity.getRolesAsString());
+        var user = new User(entity.getPublicId(), entity.getUsername(), entity.getEmail(), entity.getPassword());
+        if (!user.matchPass(password, passwordHasher)) throw new BusinessRuleException("Invalid Credentials");
+
+        String accessToken = tokenService.generateAccessToken(user.getPublicId().toString(), user.getUsername(), entity.getRolesAsString());
         String refreshTokenStr = tokenService.generateRefreshToken();
         RefreshTokenEntity.revokeByUsername(user.getUsername());
-        // Salva novo refresh token
+
         RefreshTokenEntity refreshTokenEntity = new RefreshTokenEntity();
         refreshTokenEntity.setToken(refreshTokenStr);
         refreshTokenEntity.setUsername(user.getUsername());
@@ -55,28 +63,33 @@ public class AuthService implements CreateUpdate {
         refreshTokenEntity.setExpiresAt(LocalDateTime.now().plusDays(7));
         saveOrUpdate(refreshTokenEntity);
 
+        log.infof("User login: username=%s", username);
         return new LoginResponse(accessToken, refreshTokenStr, Duration.ofMinutes(15).getSeconds());
     }
 
     @Transactional
     public LoginResponse refresh(RefreshRequest request) {
-        RefreshTokenEntity refreshTokenEntity = RefreshTokenEntity.findByToken(request.refreshToken());
+        RefreshTokenEntity refreshTokenEntity = RefreshTokenEntity.findByToken(request.refreshToken())
+                .filter(RefreshTokenEntity::isValid)
+                .orElseThrow(() -> new ApplicationException("Invalid or expired refresh token"));
 
-        if (Objects.isNull(refreshTokenEntity) || !refreshTokenEntity.isValid()) {
-            throw new ApplicationException("Refresh token inválido ou expirado");
-        }
+        UserEntity entity = UserEntity.findByUsername(refreshTokenEntity.getUsername())
+                .orElseThrow(() -> new ResourceNotFound("User not found"));
 
-        UserEntity entity = UserEntity.findByUsername(refreshTokenEntity.getUsername());
-        if (Objects.isNull(entity)) throw new ResourceNotFound("User not found");
+        String accessToken = tokenService.generateAccessToken(entity.getPublicId().toString(), entity.getUsername(), entity.getRolesAsString());
 
-        String accessToken = tokenService.generateAccessToken(entity.getUsername(), entity.getRolesAsString());
-
+        log.infof("Token refreshed: username=%s", refreshTokenEntity.getUsername());
         return new LoginResponse(accessToken, refreshTokenEntity.getToken(), Duration.ofMinutes(15).getSeconds());
     }
 
     @Transactional
-    public void logout(String username) {
-        RefreshTokenEntity.revokeByUsername(username);
+    public void logout(UUID publicId) {
+        UserEntity.find("publicId = ?1 and enabled = ?2", publicId, true)
+                .<UserEntity>firstResultOptional()
+                .ifPresent(entity -> {
+                    RefreshTokenEntity.revokeByUsername(entity.getUsername());
+                    log.infof("User logout: publicId=%s username=%s", publicId, entity.getUsername());
+                });
     }
 
     @Transactional
@@ -84,40 +97,42 @@ public class AuthService implements CreateUpdate {
     public User saveOrUpdate(final UserSave userSave) {
         var user = new User(userSave.name(), userSave.email(), userSave.password());
         var entity = new UserEntity();
-        entity.setEmail(user.getEmail());
-        entity.setPassword(user.getPassword());
+        entity.setEmail(user.getEmailAddress());
+        entity.setPassword(passwordHasher.hash(user.getPassword()));
         entity.setUsername(user.getUsername());
+        entity.setFullName(user.getFullName());
         saveOrUpdate(entity);
         user.setPublicId(entity.getPublicId());
+        log.infof("User registered: username=%s", entity.getUsername());
         return user;
     }
 
+    @Transactional
     @CacheInvalidate(cacheName = "user-cache")
     public User update(@CacheKey final UUID id, final UserPutRequest dto) {
-        User user = new User(dto.username(), dto.email(), dto.password());
-        UserEntity entity = UserEntity.find("id = ?1 and enabled = ?2", id, true).firstResult();
-        if (Objects.isNull(entity)) throw new ResourceNotFound("User not found");
-        entity.setEmail(user.getEmail());
-        entity.setPassword(user.getPassword());
-        entity.setUsername(user.getUsername());
+        UserEntity entity = UserEntity.find("publicId = ?1 and enabled = ?2", id, true)
+                .<UserEntity>firstResultOptional()
+                .orElseThrow(() -> new ResourceNotFound("User not found"));
+        entity.setEmail(new EmailAddress(dto.email()).value());
+        entity.setUsername(new Username(dto.username()).value());
+        entity.setPassword(passwordHasher.hash(new Password(dto.password()).value()));
         saveOrUpdate(entity);
-        return user;
+        return new User(entity.getPublicId(), entity.getUsername(), entity.getFullName(), entity.getEmail(), entity.getPassword());
     }
 
     @CacheResult(cacheName = "user-cache")
     public User getUser(@CacheKey final UUID id) {
-        UserEntity entity = UserEntity.find("publicId = ?1 and enabled = ?2", id, true).firstResult();
-        if (Objects.isNull(entity)) throw new ResourceNotFound("User not found");
-        return new User(entity.getPublicId(), entity.getUsername(), entity.getEmail(), entity.getPassword());
+        return UserEntity.find("publicId = ?1 and enabled = ?2", id, true)
+                .<UserEntity>firstResultOptional()
+                .map(e -> new User(e.getPublicId(), e.getUsername(), e.getFullName(), e.getEmail(), e.getPassword()))
+                .orElseThrow(() -> new ResourceNotFound("User not found"));
     }
 
     @CacheResult(cacheName = "user-list-cache")
     public Collection<User> getAllUsers() {
-        List<UserEntity> entities = UserEntity.find("enabled", true)
-                .list();
-        return entities
-                .stream()
-                .map(entity -> new User(entity.getPublicId(), entity.getUsername(), entity.getEmail(), entity.getPassword()))
+        List<UserEntity> entities = UserEntity.find("enabled", true).list();
+        return entities.stream()
+                .map(entity -> new User(entity.getPublicId(), entity.getUsername(), entity.getFullName(), entity.getEmail(), entity.getPassword()))
                 .toList();
     }
 
@@ -125,10 +140,11 @@ public class AuthService implements CreateUpdate {
     @CacheInvalidate(cacheName = "user-cache")
     @CacheInvalidateAll(cacheName = "user-list-cache")
     public void delete(@CacheKey final UUID id) {
-        UserEntity entity = UserEntity.find("publicId = ?1 and enabled = ?2", id, true).firstResult();
-        if (Objects.isNull(entity)) throw new ResourceNotFound("User not found");
+        UserEntity entity = UserEntity.find("publicId = ?1 and enabled = ?2", id, true)
+                .<UserEntity>firstResultOptional()
+                .orElseThrow(() -> new ResourceNotFound("User not found"));
         entity.setEnabled(false);
         saveOrUpdate(entity);
+        log.infof("User soft-deleted: publicId=%s", id);
     }
-
 }

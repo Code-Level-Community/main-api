@@ -1,0 +1,410 @@
+erDiagram
+    %% ========================================
+    %% MÓDULO DE AUTENTICAÇÃO E USUÁRIOS
+    %% ========================================
+    
+    users {
+        uuid id PK
+        varchar username UK "unique"
+        varchar email UK "unique"
+        varchar password_hash
+        varchar full_name
+        text avatar_url
+        enum role "ADMIN, INSTRUCTOR, STUDENT"
+        integer xp_total "default 0"
+        integer level_id FK
+        timestamp created_at
+        timestamp updated_at
+        boolean is_active "default true"
+    }
+    
+    levels {
+        integer id PK
+        varchar name "Ex: Iniciante, Intermediário"
+        integer xp_required "XP mínimo para atingir"
+        text badge_icon_url
+        timestamp created_at
+    }
+    
+    social_media_accounts {
+        uuid id PK
+        uuid user_id FK
+        enum platform "INSTAGRAM, TIKTOK, YOUTUBE"
+        varchar profile_url
+        varchar access_token "encrypted"
+        timestamp token_expires_at
+        boolean is_verified "default false"
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    %% ========================================
+    %% MÓDULO DE CURSOS
+    %% ========================================
+    
+    courses {
+        uuid id PK
+        uuid instructor_id FK
+        varchar title
+        text description
+        text thumbnail_url
+        enum difficulty_level "BEGINNER, INTERMEDIATE, ADVANCED"
+        integer total_duration_minutes "calculado"
+        enum status "DRAFT, EXPERIMENTAL, COMMUNITY_APPROVED, EXPERT_APPROVED, ARCHIVED"
+        decimal approval_threshold "% de feedbacks positivos necessário"
+        integer total_lessons "calculado"
+        integer total_enrollments "denormalizado para performance"
+        decimal average_rating "denormalizado"
+        timestamp published_at
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    course_categories {
+        integer id PK
+        varchar name "Ex: Frontend, Backend, DevOps"
+        varchar slug UK
+        text icon_url
+        timestamp created_at
+    }
+    
+    course_category_mapping {
+        uuid course_id FK
+        integer category_id FK
+    }
+    
+    course_tags {
+        integer id PK
+        varchar name UK "Ex: JavaScript, React, Docker"
+        varchar slug UK
+        timestamp created_at
+    }
+    
+    course_tag_mapping {
+        uuid course_id FK
+        integer tag_id FK
+    }
+    
+    modules {
+        uuid id PK
+        uuid course_id FK
+        varchar title
+        text description
+        integer order_position "ordem dentro do curso"
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    lessons {
+        uuid id PK
+        uuid module_id FK
+        varchar title
+        text description
+        enum content_type "VIDEO, TEXT, MIXED"
+        text video_url "YouTube/Vimeo embed"
+        integer video_duration_seconds
+        text text_content "markdown/html"
+        integer order_position "ordem dentro do módulo"
+        integer xp_reward "XP ganho ao completar"
+        boolean has_exercise "flag se tem exercício"
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    exercises {
+        uuid id PK
+        uuid lesson_id FK
+        enum type "QUIZ, CODE_CHALLENGE"
+        varchar title
+        text description
+        jsonb quiz_data "perguntas e respostas para quiz"
+        text code_template "template inicial para código"
+        jsonb test_cases "casos de teste para código"
+        integer max_attempts "0 = ilimitado"
+        integer xp_reward "XP total (reduz 10% por tentativa errada)"
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    %% ========================================
+    %% MÓDULO DE PROGRESSO DO ALUNO
+    %% ========================================
+    
+    course_enrollments {
+        uuid id PK
+        uuid user_id FK
+        uuid course_id FK
+        timestamp enrolled_at
+        timestamp started_at "primeira aula assistida"
+        timestamp completed_at "100% do curso"
+        decimal progress_percentage "calculado"
+        integer lessons_completed
+        integer total_study_time_minutes
+    }
+    
+    lesson_progress {
+        uuid id PK
+        uuid user_id FK
+        uuid lesson_id FK
+        boolean is_completed "default false"
+        integer watch_time_seconds "tempo assistido do vídeo"
+        integer video_duration_seconds "duração total"
+        decimal completion_percentage "calculado"
+        timestamp started_at
+        timestamp completed_at
+        timestamp last_watched_at
+    }
+    
+    exercise_attempts {
+        uuid id PK
+        uuid user_id FK
+        uuid exercise_id FK
+        integer attempt_number "contador de tentativas"
+        jsonb submitted_answer "resposta do aluno"
+        boolean is_correct
+        integer xp_earned "XP ganho (reduzido se errou antes)"
+        text feedback "feedback automático"
+        timestamp submitted_at
+    }
+    
+    %% ========================================
+    %% MÓDULO DE GAMIFICAÇÃO
+    %% ========================================
+    
+    xp_transactions {
+        uuid id PK
+        uuid user_id FK
+        integer xp_amount "pode ser positivo ou negativo"
+        enum source "LESSON_COMPLETED, EXERCISE_COMPLETED, ACHIEVEMENT_UNLOCKED"
+        uuid source_id "id da aula/exercício/achievement"
+        text description
+        timestamp created_at
+    }
+    
+    achievements {
+        integer id PK
+        varchar name "Ex: Primeira Vitória"
+        varchar slug UK
+        text description
+        text icon_url
+        enum trigger_type "COURSE_COMPLETED, STREAK_DAYS, LESSONS_COMPLETED"
+        jsonb trigger_criteria "JSON com regras específicas"
+        integer xp_reward
+        timestamp created_at
+    }
+    
+    user_achievements {
+        uuid id PK
+        uuid user_id FK
+        integer achievement_id FK
+        timestamp unlocked_at
+    }
+    
+    user_streaks {
+        uuid user_id PK
+        integer current_streak_days "dias consecutivos estudando"
+        date last_activity_date
+        integer longest_streak_days "recorde pessoal"
+        timestamp updated_at
+    }
+    
+    %% ========================================
+    %% MÓDULO DE AVALIAÇÕES E FEEDBACKS
+    %% ========================================
+    
+    course_reviews {
+        uuid id PK
+        uuid user_id FK
+        uuid course_id FK
+        integer rating "1 a 5 estrelas"
+        text comment
+        boolean is_positive "rating >= 4 = true"
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    lesson_feedbacks {
+        uuid id PK
+        uuid user_id FK
+        uuid lesson_id FK
+        boolean is_helpful "like/dislike"
+        text comment "opcional"
+        timestamp created_at
+    }
+    
+    %% ========================================
+    %% MÓDULO DE COMUNIDADE (Q&A)
+    %% ========================================
+    
+    questions {
+        uuid id PK
+        uuid user_id FK
+        uuid course_id FK
+        varchar title
+        text content
+        integer upvotes "denormalizado"
+        integer answers_count "denormalizado"
+        boolean has_accepted_answer "default false"
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    answers {
+        uuid id PK
+        uuid question_id FK
+        uuid user_id FK
+        text content
+        integer upvotes "denormalizado"
+        boolean is_accepted "resposta aceita pelo autor"
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    votes {
+        uuid id PK
+        uuid user_id FK
+        enum votable_type "QUESTION, ANSWER"
+        uuid votable_id "id da pergunta ou resposta"
+        enum vote_type "UPVOTE, DOWNVOTE"
+        timestamp created_at
+    }
+    
+    %% ========================================
+    %% MÓDULO DE TRILHAS DE APRENDIZADO
+    %% ========================================
+    
+    learning_paths {
+        uuid id PK
+        uuid creator_id FK "admin que criou"
+        varchar title
+        text description
+        text thumbnail_url
+        enum difficulty_level "BEGINNER, INTERMEDIATE, ADVANCED"
+        text prerequisites "texto livre com pré-requisitos"
+        integer courses_count "denormalizado"
+        integer total_duration_hours "denormalizado"
+        boolean is_published "default false"
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    learning_path_courses {
+        uuid id PK
+        uuid learning_path_id FK
+        uuid course_id FK
+        integer order_position "ordem na trilha"
+        text learning_objectives "objetivos específicos"
+        timestamp added_at
+    }
+    
+    %% ========================================
+    %% MÓDULO DE SOLICITAÇÕES DE CURSOS
+    %% ========================================
+    
+    course_requests {
+        uuid id PK
+        uuid requester_id FK
+        varchar title
+        text description
+        integer category_id FK
+        enum status "PENDING, APPROVED, IN_PROGRESS, COMPLETED, REJECTED"
+        integer upvotes "denormalizado"
+        integer downvotes "denormalizado"
+        decimal approval_percentage "calculado"
+        uuid assigned_instructor_id FK "instrutor que aceitou"
+        uuid created_course_id FK "curso criado a partir da solicitação"
+        timestamp created_at
+        timestamp approved_at
+        timestamp completed_at
+    }
+    
+    course_request_votes {
+        uuid id PK
+        uuid course_request_id FK
+        uuid user_id FK
+        enum vote_type "UPVOTE, DOWNVOTE"
+        timestamp created_at
+    }
+    
+    %% ========================================
+    %% MÓDULO DE CERTIFICADOS
+    %% ========================================
+    
+    certificates {
+        uuid id PK
+        uuid user_id FK
+        uuid course_id FK
+        varchar certificate_code UK "código único para validação"
+        text pdf_url "URL do PDF gerado"
+        timestamp issued_at
+        timestamp created_at
+    }
+    
+    %% ========================================
+    %% MÓDULO DE INTEGRAÇÕES (Instagram/TikTok)
+    %% ========================================
+    
+    social_media_posts {
+        uuid id PK
+        uuid user_id FK "instrutor"
+        enum platform "INSTAGRAM, TIKTOK"
+        enum post_type "COURSE_APPROVED, MILESTONE_REACHED"
+        uuid reference_id "id do curso/achievement"
+        text content "texto do post"
+        text media_url "imagem/vídeo"
+        enum status "PENDING, POSTED, FAILED"
+        text error_message "se falhou"
+        timestamp scheduled_at
+        timestamp posted_at
+        timestamp created_at
+    }
+    
+    %% ========================================
+    %% RELACIONAMENTOS
+    %% ========================================
+    
+    users ||--o{ courses : "cria (instrutor)"
+    users ||--o{ course_enrollments : "matricula-se"
+    users ||--o{ lesson_progress : "assiste"
+    users ||--o{ exercise_attempts : "tenta resolver"
+    users ||--o{ xp_transactions : "ganha/perde XP"
+    users ||--o{ user_achievements : "desbloqueia"
+    users ||--|| user_streaks : "tem streak"
+    users ||--o{ course_reviews : "avalia curso"
+    users ||--o{ lesson_feedbacks : "dá feedback"
+    users ||--o{ questions : "pergunta"
+    users ||--o{ answers : "responde"
+    users ||--o{ votes : "vota"
+    users ||--o{ course_requests : "solicita curso"
+    users ||--o{ course_request_votes : "vota em solicitação"
+    users ||--o{ certificates : "recebe"
+    users ||--o{ social_media_accounts : "vincula"
+    users }o--|| levels : "pertence a nível"
+    
+    courses ||--o{ modules : "contém"
+    courses ||--o{ course_enrollments : "tem matrículas"
+    courses ||--o{ course_reviews : "recebe avaliações"
+    courses ||--o{ questions : "tem perguntas"
+    courses }o--o{ course_categories : "pertence a categorias"
+    courses }o--o{ course_tags : "tem tags"
+    courses ||--o{ certificates : "gera"
+    
+    modules ||--o{ lessons : "contém"
+    
+    lessons ||--o| exercises : "pode ter exercício"
+    lessons ||--o{ lesson_progress : "rastreia progresso"
+    lessons ||--o{ lesson_feedbacks : "recebe feedback"
+    
+    exercises ||--o{ exercise_attempts : "tem tentativas"
+    
+    achievements ||--o{ user_achievements : "é desbloqueado por"
+    
+    questions ||--o{ answers : "tem respostas"
+    
+    learning_paths ||--o{ learning_path_courses : "contém cursos"
+    learning_paths }o--|| users : "criado por admin"
+    
+    course_requests }o--|| users : "solicitado por"
+    course_requests }o--o| users : "atribuído a instrutor"
+    course_requests ||--o{ course_request_votes : "recebe votos"
+    course_requests }o--o| courses : "gera curso"

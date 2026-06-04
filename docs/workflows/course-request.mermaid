@@ -1,0 +1,56 @@
+%% version: 1.1.0
+%% updated: 2026-05-08
+%% description: Ciclo de vida de uma solicitação de curso pela comunidade.
+%% changes:
+%%   1.1.0 - Detalhado critério de aprovação automática com constantes do código;
+%%           adicionada nota sobre single-instructor; give-up explicitado como transição.
+%%   1.0.0 - Criação inicial do workflow.
+
+stateDiagram-v2
+    [*] --> PENDING: Aluno/Instrutor cria solicitação
+
+    PENDING --> APPROVED: Aprovação automática por votos\n(≥20 votos e ≥70% aprovação)
+    PENDING --> REJECTED: Admin rejeita manualmente
+
+    APPROVED --> IN_PROGRESS: Instrutor aceita\nassigned_instructor_id preenchido
+    APPROVED --> REJECTED: Admin rejeita
+
+    IN_PROGRESS --> COMPLETED: Instrutor finaliza\ncreated_course_id preenchido
+    IN_PROGRESS --> APPROVED: Instrutor desiste (give-up)\nassigned_instructor_id limpo
+
+    COMPLETED --> [*]: Curso criado — entra no fluxo\nnormal (DRAFT → EXPERIMENTAL → ...)
+    REJECTED --> [*]: Solicitação arquivada
+
+    note right of PENDING
+        Status inicial
+        Votação aberta: upvote / downvote
+        Constantes: MIN_VOTES = 20
+        APPROVAL_THRESHOLD = 70%
+        approval_percentage recalculada\na cada voto
+    end note
+
+    note right of APPROVED
+        Aprovação automática ao atingir threshold
+        Visível para instrutores aceitarem
+        assigned_instructor_id = NULL
+        Admin ainda pode rejeitar
+    end note
+
+    note right of IN_PROGRESS
+        Um único instrutor por vez
+        assigned_instructor_id preenchido
+        Outros instrutores bloqueados
+        Give-up devolve para APPROVED
+    end note
+
+    note right of COMPLETED
+        created_course_id armazena link\ncom o curso criado
+        Rastreabilidade sugestão → curso
+        Curso inicia como DRAFT
+    end note
+
+    note right of REJECTED
+        Motivos: duplicidade, fora do escopo,
+        conteúdo inapropriado
+        Histórico preservado para auditoria
+    end note

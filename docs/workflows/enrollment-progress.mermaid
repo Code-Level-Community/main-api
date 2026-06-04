@@ -1,0 +1,53 @@
+%% version: 1.0.0
+%% updated: 2026-05-08
+%% description: Fluxo completo desde a matrícula em um curso até a conclusão
+%%              e emissão de certificado, passando pelo tracking de progresso de aulas.
+
+flowchart TD
+    START([Aluno acessa curso])
+
+    START --> ENROLL_CHECK{Matrícula\njá existe?}
+    ENROLL_CHECK -->|Sim| ERR_DUP[/Throw ResourceAlreadyExists\n409 Conflict/]
+    ENROLL_CHECK -->|Não| ENROLL[POST /enrollments\nCriar CourseEnrollmentEntity\nprogressPercentage = 0\nlessonsCompleted = 0]
+
+    ENROLL --> WATCH[Aluno acessa uma aula]
+
+    WATCH --> TRACK[trackProgress\nuserId · lessonId\nwatchTimeSeconds · videoDuration]
+
+    TRACK --> UPSERT{LessonProgressEntity\njá existe para\neste par user+lesson?}
+    UPSERT -->|Não| CREATE_PROG[Criar LessonProgressEntity\nstartedAt = now()]
+    UPSERT -->|Sim| UPDATE_WATCH
+    CREATE_PROG --> UPDATE_WATCH
+
+    UPDATE_WATCH[Atualizar watchTimeSeconds\ncompletionPercentage\nlastWatchedAt = now()]
+
+    UPDATE_WATCH --> THRESHOLD{watchTime >=\n90% do videoDuration?}
+    THRESHOLD -->|Não| PERSIST_PARTIAL[Persistir progresso parcial\nUsuário pode continuar depois]
+    PERSIST_PARTIAL --> MORE_LESSONS
+
+    THRESHOLD -->|Sim| MARK[completed = true\ncompletedAt = now()]
+    MARK --> ENROLL_UPDATE[updateProgress\nlessonsCompleted += 1\nprogressPercentage = lessonsCompleted/totalLessons×100]
+
+    ENROLL_UPDATE --> FIRST_LESSON{startedAt\njá preenchido?}
+    FIRST_LESSON -->|Não| SET_STARTED[startedAt = now()]
+    FIRST_LESSON -->|Sim| FULL_CHECK
+    SET_STARTED --> FULL_CHECK
+
+    FULL_CHECK{progressPercentage\n== 100%?}
+    FULL_CHECK -->|Não| PERSIST_PROGRESS[Persistir enrollment atualizado]
+    PERSIST_PROGRESS --> MORE_LESSONS
+
+    FULL_CHECK -->|Sim| COMPLETE[completedAt = now()\nEnrollment concluído automaticamente]
+    COMPLETE --> CERT_ELIGIBLE[Aluno apto a solicitar certificado]
+    CERT_ELIGIBLE --> CERT_REQUEST[POST /certificates/request\nVerifica completedAt via EnrollmentClient\nEmite certificado assíncrono]
+    CERT_REQUEST --> END([Curso concluído ✓])
+
+    MORE_LESSONS{Mais aulas\ndisponíveis?}
+    MORE_LESSONS -->|Sim| WATCH
+    MORE_LESSONS -->|Não| WAIT([Aguardar novo conteúdo])
+
+    subgraph MANUAL_COMPLETE ["Conclusão Manual (conteúdo não-vídeo)"]
+        MC1[POST /lesson-progress/id/complete]
+        MC1 --> MC2[markComplete\ncompleted = true\ncompletedAt = now()]
+        MC2 --> MC3[Mesmo fluxo de\nupdateProgress acima]
+    end

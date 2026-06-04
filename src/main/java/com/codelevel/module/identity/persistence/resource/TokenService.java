@@ -15,8 +15,9 @@ public class TokenService {
     @ConfigProperty(name = "mp.jwt.verify.issuer")
     String issuer;
 
-    public String generateAccessToken(String username, String roles) {
+    public String generateAccessToken(String publicId, String username, String roles) {
         return Jwt.issuer(issuer)
+                .subject(publicId)
                 .upn(username)
                 .groups(new HashSet<>(Arrays.asList(roles.split(","))))
                 .expiresIn(Duration.ofMinutes(15))

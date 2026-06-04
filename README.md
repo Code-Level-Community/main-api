@@ -47,7 +47,7 @@ Para máxima performance e baixo consumo de memória:
 ## 🤝 Como contribuir
 Adoramos contribuições! Você pode ajudar de duas formas:
 
-1. **Desenvolvimento:** Corrija bugs ou implemente novas features. Consulte o nosso [Manual de Contribuição](CONTRIBUITING.md).
+1. **Desenvolvimento:** Corrija bugs ou implemente novas features. Consulte o [Manual de Contribuição](CONTRIBUTING.md).
 2. **Conteúdo:** Tem algo para ensinar? Sugira um curso através das nossas [Issues]().
 
 **Antes de começar, leia nosso [Código de Conduta](CODE_OF_CONDUCT.md).**

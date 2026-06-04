@@ -5,27 +5,15 @@ quarkus:
   http:
     cors:
       enabled: true
-      origins: "*"
       methods: "GET,POST,PUT,DELETE,OPTIONS"
       headers: "Content-Type,Authorization,Content-Disposition"
       exposed-headers: "Authorization"
     root-path: /api
     port: 8080
+
   flyway:
-#    migrate-at-start: false
     active: true
-  datasource:
-    db-kind: h2
-    jdbc:
-      url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
-    username: sa
-    password: sa
-  hibernate-orm:
-    schema-management:
-      strategy: drop-and-create
-    log:
-      format-sql: true
-      active: true
+
   cache:
     caffeine:
       user-cache:
@@ -39,12 +27,21 @@ quarkus:
         initial-capacity: 1
         maximum-size: 10
 
+integration:
+  linkedin:
+    access-token: ${LINKEDIN_ACCESS_TOKEN:}
+    author-urn: ${LINKEDIN_AUTHOR_URN:}
+  instagram:
+    access-token: ${INSTAGRAM_ACCESS_TOKEN:}
+    user-id: ${INSTAGRAM_USER_ID:}
+
 mp:
   jwt:
     verify:
       publickey:
         location: META-INF/resources/publicKey.pem
       issuer: https://exemplo.com
+
 smallrye:
   jwt:
     sign:

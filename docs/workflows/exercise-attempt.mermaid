@@ -1,0 +1,36 @@
+%% version: 1.0.0
+%% updated: 2026-05-08
+%% description: Fluxo de tentativa de exercício com controle de max_attempts,
+%%              avaliação de resposta, cálculo de XP e progressão de aula.
+
+flowchart TD
+    START([Aluno submete resposta\nPOST /exercise-attempts])
+
+    START --> COUNT[Contar tentativas anteriores\ncountByUserAndExercise]
+    COUNT --> MAX{tentativas feitas\n>= exercise.maxAttempts?}
+    MAX -->|Sim| ERR_MAX[/Throw BusinessRuleException\nLimite de tentativas atingido/]
+    MAX -->|Não| ATTEMPT_NUM[attemptNumber = contador + 1]
+
+    ATTEMPT_NUM --> EVAL{Resposta\ncorreta?}
+
+    EVAL -->|Não| WRONG_XP[xpEarned = 0]
+    WRONG_XP --> SAVE_WRONG[Criar ExerciseAttemptEntity\ncorrect = false\nxpEarned = 0\nfeedback gerado]
+    SAVE_WRONG --> FEEDBACK[/Return tentativa com\nfeedback de erro/]
+
+    EVAL -->|Sim| CALC_XP[baseXP = exercise.xpReward\nfailedAttempts = countFailedByUserAndExercise]
+    CALC_XP --> DEDUCT[xpEarned = baseXP\n− failedAttempts × 10%\nmínimo = 0]
+    DEDUCT --> AWARD_XP{xpEarned > 0?}
+    AWARD_XP -->|Sim| XP[xpService.award\nuserId · xpEarned\nEXERCISE_COMPLETED · exerciseId]
+    AWARD_XP -->|Não| SAVE_RIGHT
+    XP --> SAVE_RIGHT
+
+    SAVE_RIGHT[Criar ExerciseAttemptEntity\ncorrect = true\nxpEarned calculado]
+    SAVE_RIGHT --> HAS_LESSON{Exercício vinculado\na uma aula?}
+    HAS_LESSON -->|Sim| MARK_LESSON[markComplete\nlessonId · userId]
+    HAS_LESSON -->|Não| SUCCESS
+    MARK_LESSON --> UPDATE_ENROLLMENT[updateProgress\nno enrollment do curso]
+    UPDATE_ENROLLMENT --> SUCCESS
+
+    SUCCESS[/Return tentativa com\ncorrect=true e xpEarned/]
+
+    note1["Fórmula XP:\nTentativa 1 correta → 100% do xpReward\nTentativa 2 correta (1 erro) → 90%\nTentativa 3 correta (2 erros) → 80%\n...\nSempre mínimo de 0 XP"]

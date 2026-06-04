@@ -1,6 +1,6 @@
 package com.codelevel.module.identity.http.rest.handler;
 
-import com.codelevel.module.identity.persistence.resource.exception.ResourceAlreadyExists;
+import com.codelevel.shared.exception.ResourceAlreadyExists;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.ExceptionMapper;
 import jakarta.ws.rs.ext.Provider;

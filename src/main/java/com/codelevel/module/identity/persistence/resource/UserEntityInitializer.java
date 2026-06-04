@@ -1,11 +1,13 @@
 package com.codelevel.module.identity.persistence.resource;
 
+import com.codelevel.module.identity.domain.PasswordHasher;
 import com.codelevel.module.identity.persistence.entity.PermissionEntity;
 import com.codelevel.module.identity.persistence.entity.RoleEntity;
 import com.codelevel.module.identity.persistence.entity.UserEntity;
 import io.quarkus.runtime.StartupEvent;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
+import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,6 +19,9 @@ import java.util.HashSet;
 public class UserEntityInitializer {
 
     private static final Logger log = LoggerFactory.getLogger(UserEntityInitializer.class);
+
+    @Inject
+    PasswordHasher passwordHasher;
 
     @Transactional
     public void createMasterUser(@Observes StartupEvent event) {
@@ -66,7 +71,8 @@ public class UserEntityInitializer {
             log.info("Creating master admin");
             var admin = new UserEntity();
             admin.setUsername("admin");
-            admin.setPassword("admin");
+            admin.setFullName("Admin User");
+            admin.setPassword(passwordHasher.hash("admin"));
             admin.setEmail("admin@codelevel.com");
             admin.setRoles(Collections.singleton(roles.stream().filter(role -> role.getName().equals("ROLE_ADMIN")).findFirst().orElse(null)));
             admin.persist();
@@ -74,7 +80,8 @@ public class UserEntityInitializer {
 
             var instructor = new UserEntity();
             instructor.setUsername("instructor");
-            instructor.setPassword("instructor");
+            instructor.setFullName("Instructor User");
+            instructor.setPassword(passwordHasher.hash("instructor"));
             instructor.setEmail("instructor@codelevel.com");
             instructor.setRoles(Collections.singleton(roles.stream().filter(role -> role.getName().equals("ROLE_INSTRUCTOR")).findFirst().orElse(null)));
             instructor.persist();
@@ -82,7 +89,8 @@ public class UserEntityInitializer {
 
             var user = new UserEntity();
             user.setUsername("user");
-            user.setPassword("user");
+            user.setFullName("Regular User");
+            user.setPassword(passwordHasher.hash("user"));
             user.setEmail("user@codelevel.com");
             user.setRoles(Collections.singleton(roles.stream().filter(role -> role.getName().equals("ROLE_USER")).findFirst().orElse(null)));
             user.persist();

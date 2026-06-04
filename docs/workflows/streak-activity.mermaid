@@ -1,0 +1,44 @@
+%% version: 1.0.0
+%% updated: 2026-05-08
+%% description: Fluxo de registro de atividade diária com lógica de streak freeze.
+%%              Idempotente no mesmo dia; estende, reseta ou usa freeze dependendo do gap.
+
+flowchart TD
+    START([recordActivity userId])
+
+    START --> FIND{UserStreakEntity\nexiste para userId?}
+    FIND -->|Não| CREATE[Criar UserStreakEntity\ncurrentStreak = 1\nlongestStreak = 1\nlastActivity = hoje\nfreezeUsedAt = null]
+    CREATE --> RETURN_NEW[/Return streak/]
+
+    FIND -->|Sim| TODAY{lastActivityDate\n== hoje?}
+    TODAY -->|Sim| IDEMPOTENT[/Return streak sem alteração\natividade já registrada hoje/]
+
+    TODAY -->|Não| GAP[dayGap = hoje − lastActivityDate]
+    GAP --> DAY1{dayGap == 1\nontem?}
+    DAY1 -->|Sim| EXTEND[currentStreak += 1\nclearFreeze\nlastActivity = hoje]
+
+    DAY1 -->|Não| FREEZE_CHECK{dayGap == 2\ne freezeUsedAt\n== ontem?}
+    FREEZE_CHECK -->|Sim| EXTEND_FREEZE[currentStreak += 1\nfreezeUsedAt = null\nlastActivity = hoje\nFreeze consumido]
+    FREEZE_CHECK -->|Não| RESET[currentStreak = 1\nfreezeUsedAt = null\nlastActivity = hoje\nStreak perdida]
+
+    EXTEND --> LONGEST
+    EXTEND_FREEZE --> LONGEST
+    RESET --> LONGEST
+
+    LONGEST{currentStreak\n> longestStreak?}
+    LONGEST -->|Sim| UPDATE_LONGEST[longestStreak = currentStreak]
+    LONGEST -->|Não| PERSIST_STREAK
+    UPDATE_LONGEST --> PERSIST_STREAK
+
+    PERSIST_STREAK[Persistir UserStreakEntity]
+    PERSIST_STREAK --> RETURN[/Return UserStreakEntity/]
+
+    subgraph FREEZE_ACTIVATION ["Ativar Freeze — POST /streaks/freeze (StreakResource)"]
+        direction TB
+        F1[xpService.spend userId · 100 XP\nSTREAK_FREEZE_COST]
+        F1 --> F2{Streak existe?}
+        F2 -->|Não| F_ERR[/Throw ResourceNotFound/]
+        F2 -->|Sim| F3{freezeUsedAt\njá preenchido?}
+        F3 -->|Sim| F_ERR2[/Throw BusinessRuleException\nFreeze já ativo/]
+        F3 -->|Não| F4[streakService.activateFreeze\nfreezeUsedAt = hoje]
+    end

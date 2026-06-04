@@ -1,0 +1,67 @@
+%% version: 1.0.0
+%% updated: 2026-05-08
+%% description: Fluxo completo de autenticação: signup, login, refresh e logout.
+%%              JWT assimétrico RSA + refresh token UUID armazenado em banco.
+
+sequenceDiagram
+    actor User
+    participant R as AuthResource
+    participant S as AuthService
+    participant T as TokenService
+    participant DB
+
+    rect rgb(240, 248, 255)
+        Note over User, DB: SIGNUP
+        User->>R: POST /auth/signup\n{username, email, password}
+        R->>S: saveOrUpdate(username, email, password)
+        S->>S: new Username(username)\nnew EmailAddress(email)\nnew Password(password)
+        Note right of S: Lança BusinessRuleException\nse inválido
+        S->>S: bcrypt.hash(password)
+        S->>DB: persist UserEntity
+        Note right of DB: @PrePersist:\npublicId = UUID.random()\nroles += ROLE_USER
+        DB-->>S: UserEntity salvo
+        S-->>R: UserEntity
+        R-->>User: 201 Created {publicId, username, email}
+    end
+
+    rect rgb(240, 255, 240)
+        Note over User, DB: LOGIN
+        User->>R: POST /auth/login\n{username, password}
+        R->>S: login(username, password)
+        S->>DB: findByUsername LOWER(username)
+        DB-->>S: UserEntity (ou vazio)
+        S->>S: bcrypt.verify(password, hash)
+        Note right of S: Lança InvalidCredentials\nse senha errada
+        S->>DB: DELETE refresh tokens\ndo usuário (single-session)
+        S->>T: generateAccessToken(userId, roles, email)
+        T-->>S: JWT assinado com RSA\n(exp: +15min, sub: userId)
+        S->>T: generateRefreshToken()
+        T-->>S: UUID aleatório
+        S->>DB: persist RefreshTokenEntity\n(expires: +7 dias)
+        S-->>R: {accessToken, refreshToken}
+        R-->>User: 200 OK {accessToken, refreshToken, expiresIn}
+    end
+
+    rect rgb(255, 255, 240)
+        Note over User, DB: TOKEN REFRESH
+        User->>R: POST /auth/refresh\n{refreshToken}
+        R->>S: refresh(refreshToken)
+        S->>DB: findByToken(refreshToken)
+        DB-->>S: RefreshTokenEntity
+        S->>S: check expiresAt > now()
+        Note right of S: Lança BusinessRuleException\nse expirado
+        S->>T: generateAccessToken()
+        T-->>S: novo JWT (exp: +15min)
+        S->>DB: substituir RefreshTokenEntity\n(novo UUID, nova expiração)
+        S-->>R: {accessToken, refreshToken}
+        R-->>User: 200 OK {accessToken, refreshToken}
+    end
+
+    rect rgb(255, 240, 240)
+        Note over User, DB: LOGOUT
+        User->>R: POST /auth/logout\n{refreshToken}
+        R->>S: logout(username)
+        S->>DB: DELETE todos os refresh\ntokens do usuário
+        R-->>User: 204 No Content
+        Note over R: Header Clear-Site-Data\nem ambiente de produção
+    end

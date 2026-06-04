@@ -1,0 +1,55 @@
+%% version: 1.1.0
+%% updated: 2026-05-08
+%% description: Ciclo de vida de um curso desde a criação até o arquivamento.
+%% changes:
+%%   1.1.0 - Adicionado caminho DRAFT→EXPERT_APPROVED (publicação direta por admin);
+%%           hard delete restrito a DRAFT; notas revisadas com regras do código.
+%%   1.0.0 - Criação inicial do workflow.
+
+stateDiagram-v2
+    [*] --> DRAFT: Instrutor cria curso
+
+    DRAFT --> EXPERIMENTAL: Instrutor publica\n(requer ≥1 módulo com ≥1 aula)
+    DRAFT --> EXPERT_APPROVED: Admin publica diretamente\n(sem fase experimental)
+    DRAFT --> [*]: Instrutor deleta\n(somente DRAFT pode ser deletado)
+
+    EXPERIMENTAL --> COMMUNITY_APPROVED: tryApprove()\napproval_rate ≥ approval_threshold\ntotal_votes ≥ 5
+    EXPERIMENTAL --> ARCHIVED: Admin arquiva
+
+    COMMUNITY_APPROVED --> ARCHIVED: Admin arquiva\n(violação de políticas)
+    EXPERT_APPROVED --> ARCHIVED: Admin arquiva\n(violação de políticas)
+
+    note right of DRAFT
+        Visível somente ao instrutor
+        Editável livremente
+        Hard delete disponível
+        Sem alunos matriculados
+    end note
+
+    note right of EXPERIMENTAL
+        Visível para todos os alunos
+        Coleta reviews para aprovação
+        approval_threshold definido\npelo admin no curso
+        Tag: "Experimental"
+    end note
+
+    note right of COMMUNITY_APPROVED
+        Atingiu approval_rate e min votes
+        Elegível para learning paths
+        Tag: "Aprovado pela Comunidade"
+        average_rating = taxa de aprovação
+    end note
+
+    note right of EXPERT_APPROVED
+        Publicado diretamente por admin
+        Sem fase experimental
+        Tag: "Aprovado por Expert"
+        Elegível para learning paths
+    end note
+
+    note right of ARCHIVED
+        Oculto em novas buscas
+        Matrículas existentes mantidas
+        Histórico preservado para\nintegridade referencial
+        Não pode ser reativado
+    end note

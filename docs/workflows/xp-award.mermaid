@@ -1,0 +1,35 @@
+%% version: 1.0.0
+%% updated: 2026-05-08
+%% description: Fluxo de concessão de XP com idempotência, bônus de streak,
+%%              cap diário (500 XP) e detecção de level-up.
+
+flowchart TD
+    START([award\nuserId · amount · source · sourceId · description])
+
+    START --> DUP{Par userId+source+sourceId\njá existe em CL_XP_TRANSACTION?}
+    DUP -->|Sim| ERR_DUP[/Throw ResourceAlreadyExists\n409 Conflict/]
+    DUP -->|Não| VALID{amount > 0?}
+    VALID -->|Não| ERR_ZERO[/Throw BusinessRuleException\nXP deve ser maior que zero/]
+    VALID -->|Sim| GET_STREAK[Buscar streak atual do userId\nem CL_USER_STREAK]
+
+    GET_STREAK --> BONUS{currentStreakDays\n>= 7?}
+    BONUS -->|Sim| APPLY[amount = amount × 1.5\nbônus de consistência]
+    BONUS -->|Não| CAP_QUERY
+    APPLY --> CAP_QUERY
+
+    CAP_QUERY[Somar XP ganho hoje pelo userId\nSUM xp_amount WHERE created_at = hoje]
+    CAP_QUERY --> CAP_CHECK{dailyTotal + amount\n> 500?}
+    CAP_CHECK -->|Não| PRE_LEVEL
+    CAP_CHECK -->|Sim| REMAINING[remaining = 500 − dailyTotal]
+    REMAINING --> ZERO{remaining == 0?}
+    ZERO -->|Sim| ERR_CAP[/Throw BusinessRuleException\nLimite diário de 500 XP atingido/]
+    ZERO -->|Não| TRUNCATE[amount = remaining\nvalor truncado ao restante disponível]
+    TRUNCATE --> PRE_LEVEL
+
+    PRE_LEVEL[Buscar nível atual\nlevelBefore = getLevelForXp totalXp]
+    PRE_LEVEL --> PERSIST[Persistir XPTransactionEntity\n+amount · source · sourceId]
+    PERSIST --> POST_LEVEL[Buscar nível pós-award\nlevelAfter = getLevelForXp totalXp + amount]
+
+    POST_LEVEL --> LEVELUP{levelAfter ≠ levelBefore?}
+    LEVELUP -->|Sim| RESULT_UP[/Return AwardXpResult\ntransaction · leveledUp=true\ncurrentLevel=levelAfter/]
+    LEVELUP -->|Não| RESULT_NO[/Return AwardXpResult\ntransaction · leveledUp=false\ncurrentLevel=levelAfter/]

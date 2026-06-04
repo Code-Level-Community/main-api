@@ -1,0 +1,46 @@
+%% version: 1.0.0
+%% updated: 2026-05-08
+%% description: Ciclo de vida de um certificado de conclusão de curso,
+%%              incluindo processamento assíncrono via Vert.x Event Bus.
+
+stateDiagram-v2
+    [*] --> PENDING: POST /certificates/request\nverifica conclusão do curso\n202 ACCEPTED retornado
+
+    PENDING --> PROCESSING: Evento "certificate.process"\nprocessador assíncrono inicia
+
+    PROCESSING --> SENT: PDF gerado com sucesso\ncertificate_code (UUID) atribuído\nverification_url gerada\nsentAt registrado
+
+    PROCESSING --> FAILED: Falha na geração\nerror_message armazenado
+
+    FAILED --> PENDING: Aluno re-solicita\nregistro anterior preservado\nnovo PENDING criado
+
+    SENT --> [*]: Certificado final\nImutável — não pode ser re-emitido
+
+    note right of PENDING
+        Snapshot capturado:
+        - user_email (imutável)
+        - user_name (imutável)
+        Commit antes do dispatch do evento
+        garante que processador encontra o registro
+    end note
+
+    note right of PROCESSING
+        Processamento assíncrono (Vert.x in-JVM)
+        Sem resposta imediata ao usuário
+        Se JVM reiniciar: registro fica stuck
+        Requer job de reconciliação (futuro)
+    end note
+
+    note right of SENT
+        certificate_code = UUID aleatório
+        Verificável publicamente:
+        GET /certificates/verify/{code}
+        Sem autenticação necessária
+    end note
+
+    note right of FAILED
+        error_message com detalhe da falha
+        Retry disponível via re-solicitação
+        Somente SENT bloqueia nova emissão
+        (não FAILED)
+    end note

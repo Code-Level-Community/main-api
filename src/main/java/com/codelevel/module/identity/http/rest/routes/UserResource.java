@@ -21,13 +21,17 @@ import java.util.UUID;
 @Consumes(MediaType.APPLICATION_JSON)
 public class UserResource {
 
+    private final AuthService authService;
+
     @Inject
-    AuthService authService;
+    public UserResource(AuthService authService) {
+        this.authService = authService;
+    }
 
     @POST
     public Response save(UserSaveRequest userSaveRequest) {
-        User response = authService.saveOrUpdate(new UserSave(userSaveRequest.username(), userSaveRequest.email(), userSaveRequest.password()));
-        var dto = new UserSavedResponse(response.getPublicId(), response.getUsername(), response.getEmail());
+        User response = authService.saveOrUpdate(new UserSave(userSaveRequest.fullName(), userSaveRequest.email(), userSaveRequest.password()));
+        var dto = new UserSavedResponse(response.getPublicId(), response.getUsername(), response.getEmailAddress(), response.getFullName());
         return Response.status(Response.Status.CREATED)
                 .entity(dto)
                 .build();
@@ -35,10 +39,10 @@ public class UserResource {
 
     @GET
     @Path("/{id}")
-    @RolesAllowed({"ROLE_USER"})
+    @RolesAllowed({"ROLE_USER", "ROLE_INSTRUCTOR", "ROLE_ADMIN"})
     public Response get(@PathParam("id") UUID id) {
         User response = authService.getUser(id);
-        var dto = new UserSavedResponse(response.getPublicId(), response.getUsername(), response.getEmail());
+        var dto = new UserSavedResponse(response.getPublicId(), response.getUsername(), response.getEmailAddress(), response.getFullName());
         return Response.status(Response.Status.OK)
                 .entity(dto)
                 .build();
@@ -49,7 +53,7 @@ public class UserResource {
     public Response getAll() {
         Collection<User> users = authService.getAllUsers();
         var listUsers = users.stream()
-                .map(user -> new UserSavedResponse(user.getPublicId(), user.getUsername(), user.getEmail()))
+                .map(user -> new UserSavedResponse(user.getPublicId(), user.getUsername(), user.getEmailAddress(), user.getFullName()))
                 .toList();
         return Response.status(Response.Status.OK)
                 .entity(listUsers)
@@ -60,7 +64,7 @@ public class UserResource {
     @Path("/{id}")
     public Response update(@PathParam("id") UUID id, UserPutRequest user) {
         User userUpdated = authService.update(id, user);
-        var objToReturn = new UserSavedResponse(userUpdated.getPublicId(), userUpdated.getUsername(), userUpdated.getEmail());
+        var objToReturn = new UserSavedResponse(userUpdated.getPublicId(), userUpdated.getUsername(), userUpdated.getEmailAddress(), userUpdated.getFullName());
         return Response.status(Response.Status.OK)
                 .entity(objToReturn)
                 .build();
@@ -72,5 +76,4 @@ public class UserResource {
         authService.delete(id);
         return Response.status(Response.Status.NO_CONTENT).build();
     }
-
 }

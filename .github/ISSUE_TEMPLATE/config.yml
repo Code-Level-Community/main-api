@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: "💬 Dúvida ou Discussão"
+    url: https://github.com/discussions
+    about: Use as Discussions para tirar dúvidas ou propor ideias antes de abrir uma issue formal.
+  - name: "🛡️ Reportar Vulnerabilidade de Segurança"
+    url: mailto:lucas.jdev1@gmail.com
+    about: "Vulnerabilidades de segurança NÃO devem ser reportadas via issue pública. Envie um e-mail."
+  - name: "📚 Propor um Curso (Conteúdo)"
+    url: https://github.com/issues/new?labels=content&template=feature_request.md
+    about: Use o template de Feature Request com a label 'content' para propor novos cursos.

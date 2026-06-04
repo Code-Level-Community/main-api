@@ -1,0 +1,48 @@
+quarkus:
+  http:
+    cors:
+      origins: ${CORS_ALLOWED_ORIGINS:https://codelevel.com}
+
+  flyway:
+    migrate-at-start: true
+
+  datasource:
+    db-kind: postgresql
+    jdbc:
+      url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+
+  hibernate-orm:
+    schema-management:
+      strategy: none
+    log:
+      format-sql: false
+      active: false
+
+  mailer:
+    mock: false
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT:587}
+    start-tls: REQUIRED
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    from: ${MAIL_FROM:noreply@codelevel.com}
+
+  rest-client:
+    course-api:
+      url: ${SERVICE_COURSE_URL:http://localhost:8080/api}
+    student-progress-api:
+      url: ${SERVICE_STUDENT_PROGRESS_URL:http://localhost:8080/api}
+    linkedin-api:
+      url: ${LINKEDIN_API_URL:https://api.linkedin.com}
+    instagram-api:
+      url: ${INSTAGRAM_API_URL:https://graph.facebook.com/v19.0}
+
+integration:
+  mock-publishing: false
+
+mp:
+  jwt:
+    verify:
+      issuer: ${JWT_ISSUER:https://codelevel.com}
