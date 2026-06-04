@@ -13,9 +13,9 @@ RUN ./mvnw package -DskipTests
 
 ## Estágio 2: Execução
 FROM eclipse-temurin:25-jre-alpine
-WORKDIR /app
+WORKDIR /app/quarkus-app
 
-COPY --from=builder /code/target/quarkus-app /app/quarkus-app
+COPY --from=builder /code/target/quarkus-app .
 
 EXPOSE 8080
-ENTRYPOINT ["java", "-Dquarkus.profile=dev", "-jar", "/app/quarkus-app/quarkus-run.jar"]
+ENTRYPOINT ["java", "-Dquarkus.profile=dev", "-jar", "quarkus-run.jar"]
