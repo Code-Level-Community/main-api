@@ -34,7 +34,7 @@ class UserResourceIT {
 
         given()
             .contentType(ContentType.JSON)
-            .body(Map.of("fullName", "Create Test", "email", email, "password", "password123"))
+            .body(Map.of("fullName", "Create Test", "email", email, "password", "Password1!"))
             .when()
             .post("/user")
             .then()
@@ -49,7 +49,7 @@ class UserResourceIT {
 
         given()
             .contentType(ContentType.JSON)
-            .body(Map.of("fullName", "First", "email", email, "password", "pass123"))
+            .body(Map.of("fullName", "First", "email", email, "password", "Password1!"))
             .when()
             .post("/user")
             .then()
@@ -57,7 +57,7 @@ class UserResourceIT {
 
         given()
             .contentType(ContentType.JSON)
-            .body(Map.of("fullName", "Second", "email", email, "password", "pass456"))
+            .body(Map.of("fullName", "Second", "email", email, "password", "Password2!"))
             .when()
             .post("/user")
             .then()
@@ -70,7 +70,7 @@ class UserResourceIT {
         String email = "getme_" + UUID.randomUUID() + "@test.com";
         Response signupResponse = given()
             .contentType(ContentType.JSON)
-            .body(Map.of("fullName", "Get Me User", "email", email, "password", "pass123"))
+            .body(Map.of("fullName", "Get Me User", "email", email, "password", "Password1!"))
             .when()
             .post("/auth/signup")
             .then()
@@ -81,7 +81,7 @@ class UserResourceIT {
         String userId = signupResponse.jsonPath().getString("id");
         String username = signupResponse.jsonPath().getString("username");
 
-        String token = loginAndGetToken(username, "pass123");
+        String token = loginAndGetToken(username, "Password1!");
 
         given()
             .header("Authorization", "Bearer " + token)
@@ -129,7 +129,7 @@ class UserResourceIT {
         String email = "update_" + UUID.randomUUID() + "@test.com";
         Response signupResponse = given()
             .contentType(ContentType.JSON)
-            .body(Map.of("fullName", "Update Me", "email", email, "password", "pass123"))
+            .body(Map.of("fullName", "Update Me", "email", email, "password", "Password1!"))
             .when()
             .post("/auth/signup")
             .then()
@@ -139,12 +139,12 @@ class UserResourceIT {
 
         String userId = signupResponse.jsonPath().getString("id");
         String username = signupResponse.jsonPath().getString("username");
-        String token = loginAndGetToken(username, "pass123");
+        String token = loginAndGetToken(username, "Password1!");
 
         given()
             .header("Authorization", "Bearer " + token)
             .contentType(ContentType.JSON)
-            .body(Map.of("username", "updated_name", "email", "updated_" + UUID.randomUUID() + "@test.com", "password", "newpass123"))
+            .body(Map.of("username", "updated_name", "email", "updated_" + UUID.randomUUID() + "@test.com", "password", "Newpass123!"))
             .when()
             .put("/user/" + userId)
             .then()
@@ -157,7 +157,7 @@ class UserResourceIT {
         String email = "todelete_" + UUID.randomUUID() + "@test.com";
         String userId = given()
             .contentType(ContentType.JSON)
-            .body(Map.of("fullName", "To Delete", "email", email, "password", "pass123"))
+            .body(Map.of("fullName", "To Delete", "email", email, "password", "Password1!"))
             .when()
             .post("/user")
             .then()

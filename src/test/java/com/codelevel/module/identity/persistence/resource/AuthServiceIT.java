@@ -145,7 +145,7 @@ class AuthServiceIT {
     @Test
     @TestTransaction
     void shouldCreateUserWithHashedPassword() {
-        String rawPassword = "mypassword123";
+        String rawPassword = "Mypassword1!";
         User user = authService.saveOrUpdate(new UserSave("Test User", "testuser_" + UUID.randomUUID() + "@example.com", rawPassword));
 
         entityManager.clear();
@@ -159,7 +159,7 @@ class AuthServiceIT {
     @Test
     @TestTransaction
     void shouldAssignRoleUserAutomaticallyOnCreate() {
-        User user = authService.saveOrUpdate(new UserSave("New User", "newuser_" + UUID.randomUUID() + "@example.com", "password123"));
+        User user = authService.saveOrUpdate(new UserSave("New User", "newuser_" + UUID.randomUUID() + "@example.com", "Password1!"));
 
         entityManager.clear();
 
@@ -172,7 +172,7 @@ class AuthServiceIT {
     @TestTransaction
     void shouldThrowResourceAlreadyExistsOnDuplicateEmail() {
         assertThrows(ResourceAlreadyExists.class,
-            () -> authService.saveOrUpdate(new UserSave("Admin Copy", "admin@codelevel.com", "password123")));
+            () -> authService.saveOrUpdate(new UserSave("Admin Copy", "admin@codelevel.com", "Password1!")));
     }
 
     // === getUser ===
@@ -198,7 +198,7 @@ class AuthServiceIT {
     @Test
     @TestTransaction
     void shouldReturnOnlyEnabledUsersInGetAll() {
-        User created = authService.saveOrUpdate(new UserSave("Temp User", "tempuser_" + UUID.randomUUID() + "@example.com", "password123"));
+        User created = authService.saveOrUpdate(new UserSave("Temp User", "tempuser_" + UUID.randomUUID() + "@example.com", "Password1!"));
         entityManager.clear();
 
         authService.delete(created.getPublicId());
@@ -216,7 +216,7 @@ class AuthServiceIT {
     @Test
     @TestTransaction
     void shouldSoftDeleteUserKeepingRecordInDatabase() {
-        User created = authService.saveOrUpdate(new UserSave("Delete Me", "deleteme_" + UUID.randomUUID() + "@example.com", "password123"));
+        User created = authService.saveOrUpdate(new UserSave("Delete Me", "deleteme_" + UUID.randomUUID() + "@example.com", "Password1!"));
         entityManager.clear();
 
         authService.delete(created.getPublicId());

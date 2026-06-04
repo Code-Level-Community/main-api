@@ -11,8 +11,8 @@ class PasswordTest {
 
     @Test
     void shouldCreateWithMinimumLength() {
-        var password = new Password("abc123");
-        assertEquals("abc123", password.value());
+        var password = new Password("Secret1!");
+        assertEquals("Secret1!", password.value());
     }
 
     @Test
@@ -24,30 +24,30 @@ class PasswordTest {
     @Test
     void shouldThrowWhenValueIsNull() {
         var ex = assertThrows(BusinessRuleException.class, () -> new Password(null));
-        assertEquals("Password cannot be empty", ex.getMessage());
+        assertEquals("A senha não pode ser vazia", ex.getMessage());
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"", "   ", "\t"})
     void shouldThrowWhenValueIsBlank(String blank) {
         var ex = assertThrows(BusinessRuleException.class, () -> new Password(blank));
-        assertEquals("Password cannot be empty", ex.getMessage());
+        assertEquals("A senha não pode ser vazia", ex.getMessage());
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"a", "ab", "abc", "abcd", "abcde"})
-    void shouldThrowWhenShorterThan6Characters(String short_) {
+    void shouldThrowWhenShorterThan8Characters(String short_) {
         var ex = assertThrows(BusinessRuleException.class, () -> new Password(short_));
-        assertEquals("Password cannot be less than 6 characters", ex.getMessage());
+        assertEquals("A senha deve ter pelo menos 8 caracteres", ex.getMessage());
     }
 
     @Test
     void shouldBeEqualWhenSameValue() {
-        assertEquals(new Password("secret"), new Password("secret"));
+        assertEquals(new Password("Secret1!"), new Password("Secret1!"));
     }
 
     @Test
     void shouldNotBeEqualWhenDifferentValue() {
-        assertNotEquals(new Password("secret"), new Password("other1"));
+        assertNotEquals(new Password("Secret1!"), new Password("Other1!a"));
     }
 }

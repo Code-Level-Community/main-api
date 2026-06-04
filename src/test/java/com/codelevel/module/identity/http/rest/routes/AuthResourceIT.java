@@ -32,7 +32,7 @@ class AuthResourceIT {
 
         given()
             .contentType(ContentType.JSON)
-            .body(Map.of("fullName", "Test User", "email", uniqueEmail, "password", "password123"))
+            .body(Map.of("fullName", "Test User", "email", uniqueEmail, "password", "Password1!"))
             .when()
             .post("/auth/signup")
             .then()
@@ -47,7 +47,7 @@ class AuthResourceIT {
 
         given()
             .contentType(ContentType.JSON)
-            .body(Map.of("fullName", "First User", "email", uniqueEmail, "password", "password123"))
+            .body(Map.of("fullName", "First User", "email", uniqueEmail, "password", "Password1!"))
             .when()
             .post("/auth/signup")
             .then()
@@ -55,7 +55,7 @@ class AuthResourceIT {
 
         given()
             .contentType(ContentType.JSON)
-            .body(Map.of("fullName", "Second User", "email", uniqueEmail, "password", "password456"))
+            .body(Map.of("fullName", "Second User", "email", uniqueEmail, "password", "Password2!"))
             .when()
             .post("/auth/signup")
             .then()
