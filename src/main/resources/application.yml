@@ -39,11 +39,11 @@ mp:
   jwt:
     verify:
       publickey:
-        location: META-INF/resources/publicKey.pem
-      issuer: https://exemplo.com
+        location: ${JWT_PUBLIC_KEY_LOCATION:META-INF/resources/publicKey.pem}
+      issuer: https://app.codelevel.club
 
 smallrye:
   jwt:
     sign:
       key:
-        location: META-INF/resources/privateKey.pem
+        location: ${JWT_PRIVATE_KEY_LOCATION:META-INF/resources/privateKey.pem}
