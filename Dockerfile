@@ -7,6 +7,7 @@ WORKDIR /code
 COPY --chown=quarkus:quarkus mvnw /code/mvnw
 COPY --chown=quarkus:quarkus .mvn /code/.mvn
 COPY --chown=quarkus:quarkus pom.xml /code/pom.xml
+RUN chmod +x /code/mvnw
 RUN ./mvnw dependency:go-offline
 
 # Copia o código-fonte e executa o build nativo do Quarkus
