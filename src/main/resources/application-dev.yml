@@ -2,7 +2,8 @@ quarkus:
   http:
     cors:
       origins: "*"
-
+  flyway:
+    enabled: false
   datasource:
     db-kind: h2
     jdbc:
