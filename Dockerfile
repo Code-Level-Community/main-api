@@ -22,7 +22,8 @@ RUN chown -R 1001:1001 /app/quarkus-app
 
 USER 1001
 
-ENV JAVA_OPTS="-Xms256m -Xmx512m -XX:+UseContainerSupport"
+ENV JAVA_OPTS="-Xms256m -Xmx512m -XX:+UseContainerSupport" \
+    QUARKUS_PROFILE=dev
 
 EXPOSE 8080
-ENTRYPOINT ["java", "-Xms256m", "-Xmx512m", "-XX:+UseContainerSupport", "-Dquarkus.profile=dev", "-jar", "/app/quarkus-app/quarkus-run.jar"]
+ENTRYPOINT ["sh", "-c", "exec /opt/java/openjdk/bin/java $JAVA_OPTS -Dquarkus.profile=$QUARKUS_PROFILE -jar /app/quarkus-app/quarkus-run.jar"]
