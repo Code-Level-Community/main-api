@@ -12,10 +12,9 @@ COPY src ./src
 RUN ./mvnw package -DskipTests
 
 ## Estágio 2: Execução
-FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
-RUN microdnf install -y java-21-openjdk-headless && microdnf clean all
+FROM eclipse-temurin:21-jre-alpine
 
-RUN groupadd -g 1001 quarkus && useradd -u 1001 -g quarkus quarkus
+RUN addgroup -g 1001 quarkus && adduser -u 1001 -G quarkus -s /bin/sh -D quarkus
 
 WORKDIR /app/quarkus-app
 COPY --from=builder /code/target/quarkus-app .
@@ -26,4 +25,4 @@ USER 1001
 ENV JAVA_OPTS="-Xms256m -Xmx512m -XX:+UseContainerSupport"
 
 EXPOSE 8080
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -Dquarkus.profile=dev -jar /app/quarkus-app/quarkus-run.jar"]
+ENTRYPOINT ["java", "-Xms256m", "-Xmx512m", "-XX:+UseContainerSupport", "-Dquarkus.profile=dev", "-jar", "/app/quarkus-app/quarkus-run.jar"]
