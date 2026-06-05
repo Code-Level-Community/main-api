@@ -26,4 +26,4 @@ USER 1001
 ENV JAVA_OPTS="-Xms256m -Xmx512m -XX:+UseContainerSupport"
 
 EXPOSE 8080
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -Dquarkus.profile=dev -jar quarkus-run.jar"]
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -Dquarkus.profile=dev -jar /app/quarkus-app/quarkus-run.jar"]
